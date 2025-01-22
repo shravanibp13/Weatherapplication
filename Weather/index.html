@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Weather App</h1>
+
+        <!-- Search by City -->
+        <div class="search-box">
+            <input type="text" id="cityInput" placeholder="Enter city name">
+            <button id="searchBtn">Search</button>
+        </div>
+
+        <!-- Geolocation Button -->
+        <button id="locationBtn">Use Current Location</button>
+
+        <!-- Temperature Unit Toggle -->
+        <button id="toggleTemp" style="display:none;">Switch to °F</button>
+
+        <!-- Loading Indicator -->
+        <div class="loading" id="loading" style="display: none;">Loading...</div>
+
+        <!-- Weather Information -->
+        <div class="weather-info" id="weatherInfo"></div>
+
+        <!-- Error Message -->
+        <div id="error"></div>
+    </div>
+    <script>
+        // Replace 'your_api_key' with your actual OpenWeather API key
+        const apiKey = '990834f49acabb106af99311613f2a92';
+        let isCelsius = true;
+
+        // Search by city name
+        document.getElementById('searchBtn').addEventListener('click', () => {
+            const city = document.getElementById('cityInput').value;
+            if (city) {
+                getWeather(city);
+            } else {
+                showError('Please enter a city name');
+            }
+        });
+
+        // Get weather by current location (geolocation)
+        document.getElementById('locationBtn').addEventListener('click', () => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    getWeatherByLocation(lat, lon);
+                });
+            } else {
+                showError('Geolocation is not supported by your browser');
+            }
+        });
+
+        // Fetch weather data by city name
+        async function getWeather(city) {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('error').textContent = ''; // Clear previous error
+            try {
+                const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
+                const response = await fetch(url);
+                const data = await response.json();
+                document.getElementById('loading').style.display = 'none';
+
+                if (data.cod === '404') {
+                    showError('City not found. Please try again.');
+                } else {
+                    displayWeather(data);
+                }
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                showError('Error fetching weather data. Please try again later.');
+                console.error(error);
+            }
+        }
+
+        // Fetch weather data by geolocation
+        async function getWeatherByLocation(lat, lon) {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('error').textContent = ''; // Clear previous error
+            try {
+                const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
+                const response = await fetch(url);
+                const data = await response.json();
+                document.getElementById('loading').style.display = 'none';
+
+                if (data.cod === '404') {
+                    showError('Location not found.');
+                } else {
+                    displayWeather(data);
+                }
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                showError('Error fetching weather data. Please try again later.');
+                console.error(error);
+            }
+        }
+
+        // Display weather information
+        function displayWeather(data) {
+            const weatherInfo = document.getElementById('weatherInfo');
+            const iconCode = data.weather[0].icon;
+            const iconUrl = `http://openweathermap.org/img/wn/${iconCode}@2x.png`;
+
+            weatherInfo.innerHTML = `
+                <h2>${data.name}, ${data.sys.country}</h2>
+                <img src="${iconUrl}" alt="Weather icon">
+                <p class="temperature" data-temp="${data.main.temp}"><strong>Temperature:</strong> ${data.main.temp} °C</p>
+                <p><strong>Weather:</strong> ${data.weather[0].description}</p>
+                <p><strong>Humidity:</strong> ${data.main.humidity}%</p>
+                <p><strong>Wind Speed:</strong> ${data.wind.speed} m/s</p>
+            `;
+
+            // Show temperature toggle button
+            document.getElementById('toggleTemp').style.display = 'inline-block';
+        }
+
+        // Show error message
+        function showError(message) {
+            document.getElementById('error').textContent = message;
+        }
+
+        // Temperature unit toggle (Celsius <-> Fahrenheit)
+        document.getElementById('toggleTemp').addEventListener('click', () => {
+            isCelsius = !isCelsius;
+            const button = document.getElementById('toggleTemp');
+            button.textContent = isCelsius ? 'Switch to °F' : 'Switch to °C';
+            const tempElem = document.querySelector('.temperature');
+            const temp = tempElem.dataset.temp;
+            const newTemp = isCelsius ? convertToCelsius(temp) : convertToFahrenheit(temp);
+            tempElem.textContent = `Temperature: ${newTemp} °${isCelsius ? 'C' : 'F'}`;
+        });
+
+        // Convert Fahrenheit to Celsius
+        function convertToCelsius(temp) {
+            return ((temp - 32) * 5 / 9).toFixed(2);
+        }
+
+        // Convert Celsius to Fahrenheit
+        function convertToFahrenheit(temp) {
+            return ((temp * 9 / 5) + 32).toFixed(2);
+        }
+    </script>
+</body>
+</html>
